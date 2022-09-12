@@ -1,4 +1,4 @@
- import {
+import {
   Controller,
   Get,
   Header,
@@ -279,13 +279,13 @@ export class MetaDataController {
     if (domain && resolution) {
       const socialPicture = resolution.resolution['social.picture.value'];
       const pfpImageFromCDN =
-        socialPicture && (
-          await getOrCacheNowPfpNFT({
+        socialPicture &&
+        (await getOrCacheNowPfpNFT({
           socialPicture,
           domain,
           resolution,
           withOverlay,
-          rasterize
+          rasterize,
         }));
 
       return {
@@ -310,7 +310,7 @@ export class MetaDataController {
     @Param('domainOrToken') domainOrToken: string,
     @QueryParam('withOverlay') withOverlay = true,
     @QueryParam('rasterize') rasterize = false,
-    @Res() response: any
+    @Res() response: any,
   ): Promise<string> {
     const domain = await findDomainByNameOrToken(
       domainOrToken.replace('.svg', ''),
@@ -325,28 +325,24 @@ export class MetaDataController {
     if (domain && resolution) {
       const socialPicture = resolution.resolution['social.picture.value'];
       const pfpImageFromCDNPath =
-      socialPicture &&
-        (await getOrCacheNowPfpNFTPath(
-          {
-            socialPicture,
-            domain,
-            resolution,
-            withOverlay,
-            rasterize
-          }
-        ));
+        socialPicture &&
+        (await getOrCacheNowPfpNFTPath({
+          socialPicture,
+          domain,
+          resolution,
+          withOverlay,
+          rasterize,
+        }));
 
       if (pfpImageFromCDNPath) {
         response.redirect(pfpImageFromCDNPath);
-        return response
+        return response;
       }
 
       // return default placeholder
       // TODO: convert default placeholder to JPG if needed
-      const res = (
-        (await pathThatSvg(
-          await this.generateImageData(name, resolution?.resolution || {}),
-        ))
+      const res = await pathThatSvg(
+        await this.generateImageData(name, resolution?.resolution || {}),
       );
       response.send(res);
       return response;
@@ -665,13 +661,18 @@ export async function fetchTokenMetadata(
 }
 async function getOrCacheImage(
   nftParams: PfpNftParams,
-  fetchImageCallBack: (socialPicture: string, withOverlay?: string, rasterize?: boolean) => Promise<string | null>
+  fetchImageCallBack: (
+    socialPicture: string,
+    withOverlay?: string,
+    rasterize?: boolean,
+  ) => Promise<string | null>,
 ) {
-  const {socialPicture, domain, resolution, withOverlay, rasterize} = nftParams;
+  const { socialPicture, domain, resolution, withOverlay, rasterize } =
+    nftParams;
   const cachedPfpNFT = await fetchImageCallBack(
     socialPicture,
     withOverlay ? domain.name : undefined,
-    rasterize
+    rasterize,
   );
   if (!cachedPfpNFT) {
     await cacheSocialPictureInCDN(socialPicture, domain, resolution);
@@ -680,7 +681,7 @@ async function getOrCacheImage(
     const trulyCachedPFPNFT = await fetchImageCallBack(
       socialPicture,
       withOverlay ? domain.name : undefined,
-      rasterize
+      rasterize,
     );
     return trulyCachedPFPNFT;
   }
@@ -688,10 +689,7 @@ async function getOrCacheImage(
 }
 
 async function getOrCacheNowPfpNFT(nftParams: PfpNftParams) {
-  return getOrCacheImage(
-    nftParams,
-    getNftPfpImageFromCDN
-  )
+  return getOrCacheImage(nftParams, getNftPfpImageFromCDN);
 }
 
 async function getOrCacheNowPfpNFTPath(nftParams: PfpNftParams) {
