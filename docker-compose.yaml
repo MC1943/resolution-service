@@ -1,0 +1,37 @@
+version: "3.9" # optional since v1.27.0
+services:
+  postgres:
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=resolution_service_development
+    image: postgres:11.16-alpine3.16
+    ports:
+      - "5432:5432"
+    container_name: pg
+
+  resolution-service:
+    container_name: resolution-service-container
+    environment:
+      - NODE_ENV=dev
+      - RESOLUTION_POSTGRES_DATABASE=resolution_service_development
+      - RESOLUTION_POSTGRES_PASSWORD=""
+      - RESOLUTION_POSTGRES_USERNAME=postgres
+      - RESOLUTION_POSTGRES_HOST=pg
+      - VIEWBLOCK_API_KEY=test
+      - ETHEREUM_JSON_RPC_API_URL=http://localhost:7545
+      - UNS_REGISTRY_EVENTS_STARTING_BLOCK=0
+      - CNS_REGISTRY_EVENTS_STARTING_BLOCK=0
+      - ZNS_NETWORK=testnet
+      - ETHEREUM_NETWORK_ID=1337
+      - POLYGON_JSON_RPC_API_URL=http://localhost:7545
+      - POLYGON_NETWORK_ID=133 7
+      - MORALIS_API_URL=http://localhost
+      - MORALIS_APP_ID=1
+      - MORALIS_API_URL=test
+      - MORALIS_APP_ID=test
+      - OPENSEA_API_KEY=test
+    image: resolution-service
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
