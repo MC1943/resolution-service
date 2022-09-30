@@ -20,6 +20,5 @@ RUN yarn cache clean
 
 # Cleanup development packages
 RUN yarn install --prefer-offline --frozen-lockfile --production --unsafe-perm --ignore-optional
-RUN yarn add @resvg/resvg-js-linux-arm64-musl --prefer-offline --frozen-lockfile --production --unsafe-perm --ignore-optional
 
 ENTRYPOINT ["node", "build/src/index.js"]
