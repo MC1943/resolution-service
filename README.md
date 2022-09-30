@@ -43,6 +43,7 @@ variety of platforms and in the cloud.
   RDS, Google Cloud SQL). To install postgres locally, follow these
   [instructions](https://www.postgresql.org/download). Make sure to configure
   password authentication for the DB user that will be used by the service.
+  - This guide has been tested with Postgres 11.17, although other versions may work as well.
 
 ### Quick start
 
@@ -55,25 +56,27 @@ variety of platforms and in the cloud.
 
 ```
 NODE_ENV=production
-RESOLUTION_POSTGRES_HOST=example.com:5432      # DB host
-RESOLUTION_POSTGRES_USERNAME=example           # DB user configured in postgres
-RESOLUTION_POSTGRES_PASSWORD=password          # DB password configured in postgres
+RESOLUTION_POSTGRES_HOST=example.com          	# DB host
+RESOLUTION_POSTGRES_PORT=5432                   # DB port
+RESOLUTION_POSTGRES_USERNAME=example           	# DB user configured in postgres
+RESOLUTION_POSTGRES_PASSWORD=password          	# DB password configured in postgres
 RESOLUTION_POSTGRES_DATABASE=resolution_service # Name of the resolution service database
-ETHEREUM_JSON_RPC_API_URL=https://alchemy.com  # Address of a JSON RPC provider. This can be a public API (e.g. Alchemy), or a local ethereum node with JSON RPC enabled
-POLYGON_JSON_RPC_API_URL=https://alchemy.com   # Address of a JSON RPC provider. This can be a public API (e.g. Alchemy), or a local ethereum node with JSON RPC enabled
-VIEWBLOCK_API_KEY=apikey                       # key for Viewblock API, required for getting data from Zilliqa blockchain
+ETHEREUM_JSON_RPC_API_URL=https://alchemy.com  	# Address of a JSON RPC provider. This can be a public API (e.g. Alchemy), or a local ethereum node with JSON RPC enabled
+POLYGON_JSON_RPC_API_URL=https://alchemy.com   	# Address of a JSON RPC provider. This can be a public API (e.g. Alchemy), or a local ethereum node with JSON RPC enabled
+VIEWBLOCK_API_KEY=apikey                       	# key for Viewblock API, required for getting data from Zilliqa blockchain
+METADATA_API=apikey				                      # key for Unstoppable Domain's Metadata API
+MORALIS_API_URL=apikey				                  # URL for the Moralis API
+MORALIS_APP_ID=apikey				                    # App ID for the Moralis API
+OPENSEA_API_KEY=apikey				                  # key for Opensea's API service
 ```
 
 This is the minimum required set of configurations for the service. Additional
 configuration options are listed in
 [Environment configuration options](README.md#environment-configuration-options).
 
-4. Setup postgres database.
-   - Connect to a postgres instance using the psql console\
-     `psql --host=HOSTNAME --username=USERNAME`
-   - Create the `resolution_service` database\
+4. Create the `resolution_service` postgres database
      `createdb resolution_service`
-5. Launch the service\
+5. Launch the service
    `docker run -d --env-file service.env -p 3000:3000 --network="host" resolution-service`
 
 ## Running the service
@@ -209,6 +212,7 @@ Additional pre-requirements that are necessary for development:
 1. Install project dependencies
 
 ```
+nvm install 14.16.1
 nvm use 14.16.1
 yarn install
 ```
@@ -225,6 +229,10 @@ RESOLUTION_POSTGRES_DATABASE=resolution_service
 ETHEREUM_JSON_RPC_API_URL=localhost:8545
 POLYGON_JSON_RPC_API_URL=localhost:8546
 VIEWBLOCK_API_KEY=apikey
+METADATA_API=apikey
+MORALIS_API_URL=apikey
+MORALIS_APP_ID=apikey
+OPENSEA_API_KEY=apikey
 ```
 
 3. Run the service

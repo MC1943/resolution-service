@@ -15,6 +15,12 @@ import { EthereumHelper } from '../utils/testing/EthereumTestsHelper';
 import { Blockchain } from '../types/common';
 import { env } from '../env';
 import Domain from '../models/Domain';
+import {
+  AttributeCharacterSet,
+  DomainAttributeTrait,
+  AttributeType,
+  getAttributeCharacterSet,
+} from '../utils/metadata';
 
 describe('MetaDataController', () => {
   const L1Fixture: LayerTestFixture = new LayerTestFixture();
@@ -68,17 +74,20 @@ describe('MetaDataController', () => {
       expect(resWithName.image).eq(
         'https://metadata.unstoppabledomains.com/image-src/testdomain.crypto.svg',
       );
-      expect(resWithName.attributes.length).eq(5);
       const correctAttributes = [
-        { trait_type: 'domain', value: 'testdomain.crypto' },
-        { trait_type: 'level', value: 2 },
-        { trait_type: 'length', value: 10 },
+        { trait_type: DomainAttributeTrait.Level, value: 2 },
+        { trait_type: DomainAttributeTrait.Ending, value: 'crypto' },
+        { trait_type: DomainAttributeTrait.Length, value: 10 },
         {
-          trait_type: 'IPFS Content',
-          value: 'QmdyBw5oTgCtTLQ18PbDvPL8iaLoEPhSyzD91q9XmgmAjb',
+          trait_type: DomainAttributeTrait.Type,
+          value: AttributeType.Standard,
         },
-        { trait_type: 'type', value: 'standard' },
+        {
+          trait_type: DomainAttributeTrait.AttributeCharacterSet,
+          value: AttributeCharacterSet.Letter,
+        },
       ];
+      expect(resWithName.attributes.length).eq(correctAttributes.length);
       expect(resWithName.attributes).to.have.deep.members(correctAttributes);
       const correctProperties = {
         records: {
@@ -137,28 +146,24 @@ describe('MetaDataController', () => {
 
       const correctAttributes = [
         {
-          trait_type: 'domain',
-          value: 'unstoppablelemming.crypto',
-        },
-        {
-          trait_type: 'level',
+          trait_type: DomainAttributeTrait.Level,
           value: 2,
         },
         {
-          trait_type: 'length',
+          trait_type: DomainAttributeTrait.Ending,
+          value: 'crypto',
+        },
+        {
+          trait_type: DomainAttributeTrait.Length,
           value: 18,
         },
         {
-          trait_type: 'adjective',
-          value: 'unstoppable',
+          trait_type: DomainAttributeTrait.Type,
+          value: AttributeType.Animal,
         },
         {
-          trait_type: 'animal',
-          value: 'lemming',
-        },
-        {
-          trait_type: 'type',
-          value: 'animal',
+          trait_type: DomainAttributeTrait.AttributeCharacterSet,
+          value: AttributeCharacterSet.Letter,
         },
       ];
       expect(response.attributes.length).to.eq(correctAttributes.length);
@@ -193,10 +198,9 @@ describe('MetaDataController', () => {
     //     .then((r) => r.body);
     //   expect(response.image).to.equal(expectedImageUrl);
     //   expect(response.attributes).to.deep.equal([
-    //     { trait_type: 'domain', value: 'trustbear.crypto' },
-    //     { trait_type: 'level', value: 2 },
-    //     { trait_type: 'length', value: 4 },
-    //     { trait_type: 'type', value: 'standard' },
+    //     { trait_type: DomainAttributeTrait.Level, value: 2 },
+    //     { trait_type: DomainAttributeTrait.Length, value: 4 },
+    //     { trait_type: DomainAttributeTrait.Type, value: 'standard' },
     //     { trait_type: 'avatar', value: 'verified-nft' },
     //   ]);
     // });
@@ -218,11 +222,14 @@ describe('MetaDataController', () => {
         .then((r) => r.body);
       expect(response.image).to.equal(expectedImageUrl);
       expect(response.attributes).to.deep.equal([
-        { trait_type: 'domain', value: 'trustbear.crypto' },
-        { trait_type: 'level', value: 2 },
-        { trait_type: 'length', value: 9 },
-        { trait_type: 'animal', value: 'bear' },
-        { trait_type: 'type', value: 'animal' },
+        { trait_type: DomainAttributeTrait.Ending, value: 'crypto' },
+        { trait_type: DomainAttributeTrait.Level, value: 2 },
+        { trait_type: DomainAttributeTrait.Length, value: 9 },
+        { trait_type: DomainAttributeTrait.Type, value: AttributeType.Animal },
+        {
+          trait_type: DomainAttributeTrait.AttributeCharacterSet,
+          value: AttributeCharacterSet.Letter,
+        },
       ]);
     });
 
@@ -248,10 +255,17 @@ describe('MetaDataController', () => {
           fontSize: 24,
         }),
         attributes: [
-          { trait_type: 'domain', value: 'unknown.crypto' },
-          { trait_type: 'level', value: 2 },
-          { trait_type: 'length', value: 7 },
-          { trait_type: 'type', value: 'standard' },
+          { trait_type: DomainAttributeTrait.Ending, value: 'crypto' },
+          { trait_type: DomainAttributeTrait.Level, value: 2 },
+          { trait_type: DomainAttributeTrait.Length, value: 7 },
+          {
+            trait_type: DomainAttributeTrait.Type,
+            value: AttributeType.Standard,
+          },
+          {
+            trait_type: DomainAttributeTrait.AttributeCharacterSet,
+            value: AttributeCharacterSet.Letter,
+          },
         ],
       });
       const token = eip137Namehash('unknown.crypto');
@@ -299,10 +313,17 @@ describe('MetaDataController', () => {
         image_url: `https://metadata.unstoppabledomains.com/image-src/${uns.name}.svg`,
         background_color: '4C47F7',
         attributes: [
-          { trait_type: 'domain', value: uns.name },
-          { trait_type: 'level', value: 2 },
-          { trait_type: 'length', value: uns.label.length },
-          { trait_type: 'type', value: 'standard' },
+          { trait_type: DomainAttributeTrait.Ending, value: 'wallet' },
+          { trait_type: DomainAttributeTrait.Level, value: 2 },
+          { trait_type: DomainAttributeTrait.Length, value: uns.label.length },
+          {
+            trait_type: DomainAttributeTrait.Type,
+            value: AttributeType.Standard,
+          },
+          {
+            trait_type: DomainAttributeTrait.AttributeCharacterSet,
+            value: AttributeCharacterSet.Alphanumeric,
+          },
         ],
       });
 
@@ -371,29 +392,24 @@ describe('MetaDataController', () => {
           `${CUSTOM_IMAGE_URL}/${domainsWithCustomImage[domain.name]}`,
         );
         const correctAttributes = [
+          { trait_type: DomainAttributeTrait.Ending, value: 'crypto' },
           {
-            trait_type: 'domain',
-            value: domain.name,
-          },
-          {
-            trait_type: 'level',
+            trait_type: DomainAttributeTrait.Level,
             value: 2,
           },
           {
-            trait_type: 'length',
+            trait_type: DomainAttributeTrait.Length,
             value: domain.label.length,
           },
           {
-            trait_type: 'type',
-            value: 'standard',
+            trait_type: DomainAttributeTrait.Type,
+            value: AttributeType.Standard,
+          },
+          {
+            trait_type: DomainAttributeTrait.AttributeCharacterSet,
+            value: getAttributeCharacterSet(domain),
           },
         ];
-        if (domain.label === 'india') {
-          correctAttributes.push({
-            trait_type: 'IPFS Content',
-            value: 'QmQq1ydvSmzrZPkr4CJJtetNSb9eSBucqQ4QoNmiRdMHzM',
-          });
-        }
         expect(response.attributes.length).to.eq(correctAttributes.length);
         expect(response.attributes).to.have.deep.members(correctAttributes);
       }
@@ -422,13 +438,8 @@ describe('MetaDataController', () => {
         .then((r) => r.body);
 
       expect(dwebHashResponse.attributes).to.deep.contain({
-        trait_type: 'IPFS Content',
-        value: 'ipfs hash content',
-      });
-
-      expect(htmlValueResponse.attributes).to.deep.contain({
-        trait_type: 'IPFS Content',
-        value: 'ipfs hash content',
+        trait_type: DomainAttributeTrait.Ending,
+        value: 'crypto',
       });
 
       expect(dwebHashResponse.properties).to.deep.equals({
@@ -447,10 +458,6 @@ describe('MetaDataController', () => {
         .get(`/metadata/${domain.name}`)
         .send()
         .then((r) => r.body);
-      expect(response.attributes).to.deep.contain({
-        trait_type: 'IPFS Content',
-        value: 'correct',
-      });
       expect(response.properties).to.deep.eq({
         records: {
           'dweb.ipfs.hash': 'correct',

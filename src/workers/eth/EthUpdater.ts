@@ -345,7 +345,18 @@ export class EthUpdater {
         `SetReverse event was not processed. Could not find domain for ${node}`,
       );
     }
-    let reverse = domain.getReverseResolution(this.blockchain, this.networkId);
+
+    let reverse = await DomainsReverseResolution.findOne(
+      {
+        reverseAddress: addr,
+        blockchain: this.blockchain,
+        networkId: this.networkId,
+      },
+      {
+        relations: ['domain'],
+      },
+    );
+
     if (!reverse) {
       reverse = new DomainsReverseResolution({
         reverseAddress: addr,
@@ -354,7 +365,10 @@ export class EthUpdater {
         domain: domain,
       });
     } else {
-      reverse.reverseAddress = addr;
+      const oldDomain = reverse.domain;
+      oldDomain.removeReverseResolution(this.blockchain, this.networkId);
+      await domainRepository.save(oldDomain);
+      reverse.domain = domain;
     }
     domain.setReverseResolution(reverse);
     await domainRepository.save(domain);

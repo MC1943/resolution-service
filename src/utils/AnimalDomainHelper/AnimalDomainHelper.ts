@@ -3,10 +3,14 @@ import ResellersDictionary from './vocabulary/resellers.json';
 import AdjectivesDictionary from './vocabulary/adjectives.json';
 import fetch from 'node-fetch';
 import { env } from '../../env';
-import { PremiumDomains, CustomImageDomains } from '../domainCategories';
+import {
+  PremiumDomains,
+  CustomImageDomains,
+  DomainAttributeTrait,
+} from '../metadata';
 
 export type OpenSeaMetadataAttribute =
-  | { trait_type?: string; value: string | number }
+  | { trait_type?: DomainAttributeTrait; value: string | number }
   | {
       display_type:
         | 'number'
@@ -32,12 +36,23 @@ export default class AnimalDomainHelper {
     const attributes: OpenSeaMetadataAttribute[] = [];
     const { prefix, animal } = this.extractPrefixAndAnimal(name);
     if (prefix && AdjectivesDictionary.includes(prefix)) {
-      attributes.push({ trait_type: 'adjective', value: prefix });
+      attributes.push({
+        trait_type: DomainAttributeTrait.Adjective,
+        value: prefix,
+      });
     }
     if (animal) {
-      attributes.push({ trait_type: 'animal', value: animal });
+      attributes.push({
+        trait_type: DomainAttributeTrait.Animal,
+        value: animal,
+      });
     }
     return attributes;
+  }
+
+  isAnimalDomain(domainName: string): boolean {
+    const { animal } = this.extractPrefixAndAnimal(domainName);
+    return animal !== '';
   }
 
   async getAnimalImageData(domainName: string): Promise<string | undefined> {

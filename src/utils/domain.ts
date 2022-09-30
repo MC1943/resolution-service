@@ -6,8 +6,16 @@ const normalizeToken = (token: string): string => {
   return '0x' + BigInt(token).toString(16).padStart(64, '0');
 };
 
-export const normalizeDomainName = (domainName: string) => {
+export const normalizeDomainName = (domainName: string): string => {
   return domainName.trim().toLowerCase();
+};
+
+export const getDomainNameTld = (domainName: string): string => {
+  return domainName.split('.').pop() ?? '';
+};
+
+export const getDomainNameLabel = (domainName: string): string => {
+  return normalizeDomainName(domainName).split('.').shift() ?? '';
 };
 
 export const normalizeDomainOrToken = (domainOrToken: string): string => {

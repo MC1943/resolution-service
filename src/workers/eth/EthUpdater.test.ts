@@ -1,7 +1,12 @@
 import { BigNumber, Contract } from 'ethers';
 import { randomBytes } from 'crypto';
 import { env } from '../../env';
-import { CnsRegistryEvent, Domain, WorkerStatus } from '../../models';
+import {
+  CnsRegistryEvent,
+  Domain,
+  DomainsReverseResolution,
+  WorkerStatus,
+} from '../../models';
 import { EthereumProvider } from '../EthereumProvider';
 import { EthereumHelper } from '../../utils/testing/EthereumTestsHelper';
 import { EthUpdater } from './EthUpdater';
@@ -692,6 +697,54 @@ describe('EthUpdater', () => {
         blockchain: Blockchain.ETH,
         networkId: env.APPLICATION.ETHEREUM.NETWORK_ID,
       });
+    });
+
+    it('should reset reverse resolution', async () => {
+      // mint a second domain
+      const uns2 = getNSConfig('blockchain');
+
+      await mintingManager.functions
+        .mintSLD(owner, uns2.tldHash, uns2.label)
+        .then((receipt) => receipt.wait());
+
+      // set reverse once
+      await unsRegistry.functions
+        .setReverse(uns.tokenId)
+        .then((receipt) => receipt.wait());
+      await EthereumHelper.mineBlocksForConfirmation();
+
+      await service.run(); // run service to save records
+
+      // set reverse twice
+      await unsRegistry.functions
+        .setReverse(uns2.tokenId)
+        .then((receipt) => receipt.wait());
+      await EthereumHelper.mineBlocksForConfirmation();
+
+      await service.run(); // set reverse twice
+
+      const domain = await Domain.findOrCreateByName(uns.name, Blockchain.ETH);
+      const domain2 = await Domain.findOrCreateByName(
+        uns2.name,
+        Blockchain.ETH,
+      );
+      const reverse = await DomainsReverseResolution.findOne({
+        reverseAddress: owner.toLowerCase(),
+        blockchain: Blockchain.ETH,
+        networkId: env.APPLICATION.ETHEREUM.NETWORK_ID,
+      });
+      // make sure that old domain doesn't have reverse resolution
+      expect(domain.reverseResolutions.length).to.eq(0);
+
+      expect(domain2.reverseResolutions.length).to.eq(1);
+      expect(domain2.reverseResolutions[0]).to.containSubset({
+        reverseAddress: owner.toLowerCase(),
+        blockchain: Blockchain.ETH,
+        networkId: env.APPLICATION.ETHEREUM.NETWORK_ID,
+      });
+
+      expect(reverse).to.exist;
+      expect(reverse?.domainId).to.eq(domain2.id);
     });
 
     it('processes a remove reverse event', async () => {

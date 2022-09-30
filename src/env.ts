@@ -191,6 +191,10 @@ export const env = {
     NEW_RELIC_LICENSE_KEY: process.env.NEW_RELIC_LICENSE_KEY || '',
     NEW_RELIC_APP_NAME: process.env.NEW_RELIC_APP_NAME || '',
     BUGSNAG_API_KEY: process.env.BUGSNAG_API_KEY || '',
+    DATADOG_APM_ENABLE: process.env.DATADOG_APM_ENABLE || 'false',
+    DATADOG_APM_SERVICE_NAME:
+      process.env.DATADOG_APM_SERVICE_NAME || 'resolution-service-staging',
+    DATADOG_AGENT_HOSTNAME: process.env.DATADOG_AGENT_HOSTNAME || 'localhost',
   },
   TYPEORM: {
     LOGGING: {

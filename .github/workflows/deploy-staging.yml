@@ -20,6 +20,7 @@ env:
   RESOLUTION_POSTGRES_DATABASE:
     ${{ secrets.RESOLUTION_STAGING_POSTGRES_DATABASE}}
   ETHEREUM_JSON_RPC_API_URL: ${{ secrets.ETHEREUM_TESTNET_JSON_RPC_API_URL}}
+  ETHEREUM_CONFIRMATION_BLOCKS: 12
   VIEWBLOCK_API_KEY: ${{ secrets.VIEWBLOCK_API_KEY }}
   GCP_SQL_INSTANCE: ${{ secrets.GCP_STAGING_SQL_INSTANCE }}
   ETHEREUM_NETWORK_ID: 5
@@ -30,14 +31,17 @@ env:
   POLYGON_JSON_RPC_API_URL: ${{ secrets.POLYGON_TESTNET_JSON_RPC_API_URL}}
   POLYGON_NETWORK_ID: 80001
   POLYGON_UNS_REGISTRY_EVENTS_STARTING_BLOCK: 18956099
-  POLYGON_CONFIRMATION_BLOCKS: 200
+  POLYGON_CONFIRMATION_BLOCKS: 2
   MORALIS_API_URL: ${{ secrets.MORALIS_API_URL}}
   MORALIS_APP_ID: ${{ secrets.MORALIS_APP_ID}}
   OPENSEA_API_KEY: ${{ secrets.OPENSEA_API_KEY}}
   POLYGON_RESYNC_FROM: ${{ secrets.RESOLUTION_STAGING_POLYGON_RESYNC_FROM}}
   ETHEREUM_RESYNC_FROM: ${{ secrets.RESOLUTION_STAGING_ETHEREUM_RESYNC_FROM}}
   CLOUD_STORAGE_BUCKET_ID: 'resolution-client-assets-staging'
-  
+  DATADOG_APM_ENABLE: ${{ secrets.RESOLUTION_STAGING_DATADOG_APM_ENABLE }}
+  DATADOG_APM_SERVICE_NAME: ${{ secrets.RESOLUTION_STAGING_DATADOG_APM_SERVICENAME }}
+  DATADOG_AGENT_HOSTNAME: ${{ secrets.RESOLUTION_STAGING_DATADOG_AGENT_HOSTNAME }}
+
 jobs:
   build_and_push_container_image:
     runs-on: ubuntu-latest
@@ -47,6 +51,15 @@ jobs:
       contents: read
 
     steps:
+      # see common issue w/GH action runners throwing "No space left on device" errors. https://github.com/orgs/community/discussions/26351 and https://github.com/orgs/community/discussions/26488 and https://github.com/orgs/community/discussions/25678 
+      - name: free disk space
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+
       - name: Checkout staging branch
         uses: actions/checkout@v2
         with:

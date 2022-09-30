@@ -26,9 +26,16 @@ import {
   cacheSocialPictureInCDN,
   PfpNftParams,
 } from '../utils/socialPicture';
-import punycode from 'punycode';
 import { getDomainResolution } from '../services/Resolution';
-import { PremiumDomains, CustomImageDomains } from '../utils/domainCategories';
+import {
+  CustomImageDomains,
+  getAttributeCharacterSet,
+  getAttributeCategory,
+  getAttributeType,
+  DomainAttributeTrait,
+  AttributeCharacterSet,
+  AttributePictureType,
+} from '../utils/metadata';
 import { Domain, DomainsResolution } from '../models';
 import { OpenSeaPort, Network } from 'opensea-js';
 import { EthereumProvider } from '../workers/EthereumProvider';
@@ -219,10 +226,7 @@ export class MetaDataController {
       domain.name,
       resolution.resolution,
     );
-    const domainAttributes = this.getDomainAttributes(domain.name, {
-      ipfsContent:
-        resolution.resolution['dweb.ipfs.hash'] ||
-        resolution.resolution['ipfs.html.value'],
+    const DomainAttributeTrait = this.getAttributeType(domain, {
       verifiedNftPicture: isSocialPictureVerified,
     });
 
@@ -237,7 +241,7 @@ export class MetaDataController {
         ? toBase64DataURI(socialPicture)
         : this.generateDomainImageUrl(domain.name),
       image_url: this.generateDomainImageUrl(domain.name),
-      attributes: domainAttributes,
+      attributes: DomainAttributeTrait,
     };
 
     if (!this.isDomainWithCustomImage(domain.name) && !socialPicture) {
@@ -246,16 +250,6 @@ export class MetaDataController {
         resolution.resolution,
       );
       metadata.background_color = '4C47F7';
-    }
-
-    if (!this.isValidDNSDomain(domain.name)) {
-      metadata.attributes.push({ value: 'invalid' });
-    }
-
-    if (domain.isUnicodeName) {
-      metadata.attributes.push({
-        value: 'unicode',
-      });
     }
 
     return metadata;
@@ -358,7 +352,7 @@ export class MetaDataController {
   ): Promise<OpenSeaMetadata> {
     const name = domainOrToken.includes('.') ? domainOrToken : null;
     const description = name ? this.getDomainDescription(name, {}) : null;
-    const attributes = name ? this.getDomainAttributes(name) : [];
+    const attributes = name ? this.getAttributeType(new Domain({ name })) : [];
     const image = name ? this.generateDomainImageUrl(name) : null;
     const image_data = name ? await this.generateImageData(name, {}) : null;
     const external_url = name
@@ -414,81 +408,56 @@ export class MetaDataController {
     return '';
   }
 
-  private getDomainAttributes(
-    name: string,
+  private getAttributeType(
+    domain: Domain,
     meta?: {
-      ipfsContent?: string;
-      verifiedNftPicture?: boolean;
-    },
-  ): OpenSeaMetadataAttribute[] {
-    let domainType = 'standard';
-    const attributes = [
-      ...this.getBasicDomainAttributes(name, meta),
-      ...this.getAnimalAttributes(name),
-    ];
-    if (attributes.find((attribute) => attribute.trait_type === 'animal')) {
-      domainType = 'animal';
-    }
-    if (PremiumDomains.includes(name)) {
-      domainType = 'premium';
-    }
-    attributes.push({ trait_type: 'type', value: domainType });
-    return attributes;
-  }
-
-  private getBasicDomainAttributes(
-    name: string,
-    meta?: {
-      ipfsContent?: string;
       verifiedNftPicture?: boolean;
     },
   ): OpenSeaMetadataAttribute[] {
     const attributes: OpenSeaMetadataAttribute[] = [
       {
-        trait_type: 'domain',
-        value: name,
+        trait_type: DomainAttributeTrait.Ending,
+        value: domain.extension,
       },
       {
-        trait_type: 'level',
-        value: name.split('.').length,
+        trait_type: DomainAttributeTrait.Level,
+        value: domain.name.split('.').length,
       },
       {
-        trait_type: 'length',
-        value: punycode.toUnicode(name).split('.')[0].length,
+        trait_type: DomainAttributeTrait.Length,
+        value: domain.label.length,
+      },
+      {
+        trait_type: DomainAttributeTrait.Type,
+        value: getAttributeType(domain.name),
       },
     ];
-
-    if (meta?.ipfsContent) {
-      attributes.push({ trait_type: 'IPFS Content', value: meta?.ipfsContent });
+    const category = getAttributeCategory(domain);
+    if (category) {
+      attributes.push({
+        trait_type: DomainAttributeTrait.Category,
+        value: category,
+      });
+    }
+    const characterSet = getAttributeCharacterSet(domain);
+    if (characterSet !== AttributeCharacterSet.None) {
+      attributes.push({
+        trait_type: DomainAttributeTrait.AttributeCharacterSet,
+        value: characterSet,
+      });
     }
     if (meta?.verifiedNftPicture) {
       attributes.push({
-        trait_type: 'picture',
-        value: 'verified-nft',
+        trait_type: DomainAttributeTrait.Picture,
+        value: AttributePictureType.VerifiedNft,
       });
     }
 
     return attributes;
   }
 
-  private getAnimalAttributes(name: string): OpenSeaMetadataAttribute[] {
-    return AnimalHelper.getAnimalAttributes(name);
-  }
-
   private isDomainWithCustomImage(name: string): boolean {
     return Boolean(CustomImageDomains[name]);
-  }
-
-  private isValidDNSDomain(domain: string): boolean {
-    const labels = domain.split('.');
-    if (labels[labels.length - 1] === '') {
-      labels.pop();
-    }
-
-    return (
-      labels.every((label) => /^(?![0-9]+$)[a-zA-Z0-9-]{1,63}$/.test(label)) &&
-      labels.reduce((a, v) => v.length + a, 0) < 253
-    );
   }
 
   private async generateImageData(

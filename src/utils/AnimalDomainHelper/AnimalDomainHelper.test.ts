@@ -1,5 +1,6 @@
 import AnimalDomainHelper from './AnimalDomainHelper';
 import { expect } from 'chai';
+import { DomainAttributeTrait } from '../metadata';
 
 describe('AnimalDomainHelper', () => {
   const helper = new AnimalDomainHelper();
@@ -14,7 +15,7 @@ describe('AnimalDomainHelper', () => {
       const attributes = helper.getAnimalAttributes('lemming.crypto');
       expect(attributes.length).to.equal(1);
       expect(attributes[0]).to.deep.equal({
-        trait_type: 'animal',
+        trait_type: DomainAttributeTrait.Animal,
         value: 'lemming',
       });
     });
@@ -35,11 +36,11 @@ describe('AnimalDomainHelper', () => {
       );
       expect(attributes.length).to.equal(2);
       expect(attributes[0]).to.deep.equal({
-        trait_type: 'adjective',
+        trait_type: DomainAttributeTrait.Adjective,
         value: 'unstoppable',
       });
       expect(attributes[1]).to.deep.equal({
-        trait_type: 'animal',
+        trait_type: DomainAttributeTrait.Animal,
         value: 'lemming',
       });
     });
@@ -63,7 +64,7 @@ describe('AnimalDomainHelper', () => {
       BrandedAnimalsDomains.forEach((domainName: string) => {
         const attributes = helper.getAnimalAttributes(domainName);
         expect(attributes).to.deep.equal([
-          { trait_type: 'animal', value: 'badger' },
+          { trait_type: DomainAttributeTrait.Animal, value: 'badger' },
         ]);
       });
     });

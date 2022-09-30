@@ -80,6 +80,11 @@ export default class Domain extends Model {
     );
   }
 
+  /** TODO: Fix or rename label()
+   * it should only return the label instead of everything but extension
+   * it should return {label}.blah.crypto
+   * currently returns {label.blah}.crypto
+   **/
   get label(): string {
     const splittedName = this.getSplittedName();
     splittedName.pop();

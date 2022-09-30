@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { api } from './api';
 import { env } from './env';
 import { logger } from './logger';
-import('newrelic');
+import './apm';
 
 const runningMode = env.APPLICATION.RUNNING_MODE;
 import connect from './database/connect';
