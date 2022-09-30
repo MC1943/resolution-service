@@ -19,6 +19,6 @@ RUN yarn build
 RUN yarn cache clean 
 
 # Cleanup development packages
-RUN yarn install --prefer-offline --frozen-lockfile --production --unsafe-perm --ignore-optional
+RUN yarn install --prefer-offline --frozen-lockfile --production --unsafe-perm
 
 ENTRYPOINT ["node", "build/src/index.js"]
