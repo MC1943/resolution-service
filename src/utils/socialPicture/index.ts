@@ -243,7 +243,9 @@ export const cacheSocialPictureInCDN = async (
         files.map(async ({ fname, data, shouldConvert }) => {
           if (shouldConvert) {
             // NB: conversion of JPEG and PNG to SVG and then back to JPEG might not be optimal.
-            const dataJPG = await convert(data); // @TODO: increase resolution to 1024x1024
+            const dataJPG = await convert(data, {
+              executablePath: '/usr/bin/chromium-browser',
+            }); // @TODO: increase resolution to 1024x1024
             return uploadPicture(fname, dataJPG);
           } else {
             return uploadPicture(fname, data);
