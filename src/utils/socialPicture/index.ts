@@ -244,7 +244,9 @@ export const cacheSocialPictureInCDN = async (
           if (shouldConvert) {
             // NB: conversion of JPEG and PNG to SVG and then back to JPEG might not be optimal.
             const dataJPG = await convert(data, {
-              executablePath: '/usr/bin/chromium-browser',
+              //can be controlled by ENV variable PUPPETEER_EXECUTABLE_PATH
+              //proper value is /usr/bin/chromium-browser
+              //executablePath: '/usr/bin/chromium-browser',
               args: ['--no-sandbox', '--disable-dev-shm-usage'],
             }); // @TODO: increase resolution to 1024x1024
             return uploadPicture(fname, dataJPG);
