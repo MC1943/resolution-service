@@ -128,7 +128,7 @@ export const env = {
         19345077,
       ),
       JSON_RPC_API_URL: process.env.POLYGON_JSON_RPC_API_URL,
-      NETWORK_ID: parseNumberFromEnv(process.env.POLYGON_NETWORK_ID, 137),
+      NETWORK_ID: parseNumberFromEnv(process.env.POLYGON_NETWORK_ID, 80001),
       CONFIRMATION_BLOCKS: parseNumberFromEnv(
         process.env.POLYGON_CONFIRMATION_BLOCKS,
         20,
@@ -195,6 +195,8 @@ export const env = {
     DATADOG_APM_SERVICE_NAME:
       process.env.DATADOG_APM_SERVICE_NAME || 'resolution-service-staging',
     DATADOG_AGENT_HOSTNAME: process.env.DATADOG_AGENT_HOSTNAME || 'localhost',
+    PUPPETEER_EXECUTABLE_PATH:
+      process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
   },
   TYPEORM: {
     LOGGING: {
