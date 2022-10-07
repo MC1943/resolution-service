@@ -247,6 +247,9 @@ export const cacheSocialPictureInCDN = async (
               //can be controlled by ENV variable PUPPETEER_EXECUTABLE_PATH
               //proper value is /usr/bin/chromium-browser
               //executablePath: '/usr/bin/chromium-browser',
+              //TODO make this work without --no-sandbox
+              //Running without a sandbox is strongly discouraged
+              // https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
               args: ['--no-sandbox', '--disable-dev-shm-usage'],
             }); // @TODO: increase resolution to 1024x1024
             return uploadPicture(fname, dataJPG);
