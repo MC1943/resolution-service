@@ -99,6 +99,14 @@ api.use(
   swaggerUI.setup(undefined, options),
 );
 
+api.get('/wsconvertSVG', async (_req: any, res: any) => {
+  const browser = await puppeteer.connect({
+    browserWSEndpoint:
+      'ws://browserless-chrome-example-vf5eblhuka-uc.a.run.app',
+    ignoreHTTPSErrors: true,
+  });
+});
+
 api.get('/convertSVG', async (_req: any, res: any) => {
   const args = [
     '--no-sandbox',
@@ -134,9 +142,11 @@ api.get('/convertSVG', async (_req: any, res: any) => {
     <body>${SVGstring}</body>
     </html>`;
 
+  console.log('writing file');
   fs.writeFile('the_html.html', html, function (err: any) {
-    console.log(err);
+    console.log('writing file ' + err);
   });
+  console.log('done writing file');
 
   /*
   //i dont know why this doesnt work; tpj 10/10/2022 15:30
@@ -147,11 +157,28 @@ api.get('/convertSVG', async (_req: any, res: any) => {
   //return res.end(dataJPG, 'binary');
   */
 
-  const browser = await puppeteer.launch({
+  const wsEndpoint = _req.query.ws || null;
+  const wsToken = _req.query.token || null;
+  let browser = await puppeteer.launch({
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     args: args,
     dumpio: true,
   });
+
+  if (wsEndpoint != null && wsToken != null) {
+    try {
+      console.log('updating to use ws');
+      const wsEndpointWithToken = wsEndpoint + '?token=' + wsToken;
+      browser = await puppeteer.connect({
+        browserWSEndpoint: wsEndpointWithToken,
+        ignoreHTTPSErrors: true,
+      });
+    } catch (err) {
+      console.log('error here:' + err);
+      throw err;
+    }
+  }
+
   console.log('puppeteer launch finished');
 
   const theurl = _req.query.theurl || fileUrl('the_html.html');
