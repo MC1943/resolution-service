@@ -8,6 +8,9 @@ import { Storage } from '@google-cloud/storage';
 import { fetchTokenMetadata } from '../../controllers/MetaDataController';
 import { logger } from '../../logger';
 import { convert } from 'convert-svg-to-jpeg';
+import puppeteer from 'puppeteer';
+import fs from 'fs';
+import fileUrl from 'file-url';
 
 const storageOptions = env.CLOUD_STORAGE.API_ENDPOINT_URL
   ? { apiEndpoint: env.CLOUD_STORAGE.API_ENDPOINT_URL } // for development using local emulator
@@ -241,8 +244,79 @@ export const cacheSocialPictureInCDN = async (
 
       await Promise.all(
         files.map(async ({ fname, data, shouldConvert }) => {
+          const SVGstring = data;
           if (shouldConvert) {
+            const args = [
+              '--no-sandbox',
+              '--disable-setuid-sandbox',
+              '--disable-gpu',
+              '--disable-dev-shm-usage',
+              '--no-first-run',
+              '--no-zygote',
+              '--single-process',
+              "--proxy-server='direct://'",
+              '--proxy-bypass-list=*',
+              '--deterministic-fetch',
+            ];
+            console.log('puppeteer args=' + args);
+
+            const html = `<!DOCTYPE html>
+                <html>
+                <head>
+                <meta charset="utf-8">
+                <style>
+                * { margin: 0; padding: 0; }
+                html { background-color: black; }
+                </style>
+                </head>
+                <body>${SVGstring}</body>
+                </html>`;
+
+            fs.writeFile('the_html.html', html, function (err: any) {
+              console.log(err);
+            });
+
+            const browser = await puppeteer.launch({
+              executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+              args: args,
+              dumpio: true,
+            });
+            console.log('puppeteer launch finished');
+
+            const theurl = fileUrl('the_html.html');
+            console.log('theurl=' + theurl);
+
+            const page = await browser.newPage();
+            console.log('opened new page');
+
+            //will need to determine size;
+            await page.setViewport({
+              width: 1500,
+              height: 1500,
+              deviceScaleFactor: 1,
+            });
+
+            await page.goto(theurl);
+            const type = 'jpeg';
+            const theEncoding = 'base64';
+            //for options see https://pptr.dev/api/puppeteer.page.screenshot
+            const dataJPG = await page.screenshot({
+              type: type,
+              encoding: theEncoding,
+              omitBackground: true,
+            });
+            browser.close();
+            /*
+            //i dont know why this doesnt work; tpj 10/10/2022 15:30
+            //const dataJPG = await convert(SVGstring, {
+              //args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+              //dumpio: true,
+            //});
+            //return res.end(dataJPG, 'binary');
+            */
+
             // NB: conversion of JPEG and PNG to SVG and then back to JPEG might not be optimal.
+            /*
             const dataJPG = await convert(data, {
               //can be controlled by ENV variable PUPPETEER_EXECUTABLE_PATH
               //proper value is /usr/bin/chromium-browser
@@ -252,6 +326,7 @@ export const cacheSocialPictureInCDN = async (
               // https://github.com/puppeteer/puppeteer/blob/main/docs/troubleshooting.md#setting-up-chrome-linux-sandbox
               args: ['--no-sandbox', '--disable-dev-shm-usage'],
             }); // @TODO: increase resolution to 1024x1024
+            */
             return uploadPicture(fname, dataJPG);
           } else {
             return uploadPicture(fname, data);
@@ -265,7 +340,7 @@ export const cacheSocialPictureInCDN = async (
     }
   }
 
-  async function uploadPicture(fileName: string, imageData: string) {
+  async function uploadPicture(fileName: string, imageData: string | Buffer) {
     const file = bucket.file(fileName);
     // cache in the storage
     const imageBuffer = Buffer.from(imageData);
