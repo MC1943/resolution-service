@@ -245,6 +245,7 @@ export const cacheSocialPictureInCDN = async (
       await Promise.all(
         files.map(async ({ fname, data, shouldConvert }) => {
           const SVGstring = data;
+          console.log('SVGstring=' + SVGstring);
           if (shouldConvert) {
             const args = [
               '--no-sandbox',
