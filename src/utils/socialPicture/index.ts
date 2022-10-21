@@ -1,7 +1,10 @@
 import nodeFetch from 'node-fetch';
 import { Domain, DomainsResolution } from '../../models';
 import { createCanvas } from 'canvas';
-import createSVGfromTemplate, { simpleSVGTemplate } from './svgTemplate';
+import createSVGfromTemplate, {
+  metaSVGTemplate,
+  simpleSVGTemplate,
+} from './svgTemplate';
 import btoa from 'btoa';
 import { env } from '../../env';
 import { Storage } from '@google-cloud/storage';
@@ -122,7 +125,34 @@ export const createSocialPictureImage = (
   }
 };
 
+/**
+ * generate NFT PFP file name in storage. Generates following types of files:
+ * - simple image,
+ * - image with domain label/logo,
+ * - image for metatatags (domain label, logo, QR)
+ * @param socialPic
+ * @param domainToOverlay
+ * @param isMeta
+ * @returns
+ */
 export const getNFTFilenameInCDN = (
+  socialPic: string,
+  domainToOverlay?: string,
+  isMeta = false,
+): string => {
+  const { chainId, nftStandard, contractAddress, tokenId } =
+    parsePictureRecord(socialPic);
+  const nftPfpFolder = 'nft-pfp';
+  const isDomainNotEmpty = Boolean(domainToOverlay?.trim());
+  const overlayPostfix = isDomainNotEmpty
+    ? isMeta
+      ? `_m_${domainToOverlay}`
+      : `_o_${domainToOverlay}`
+    : '';
+  return `${nftPfpFolder}/${chainId}_${nftStandard}:${contractAddress}_${tokenId}${overlayPostfix}.svg`;
+};
+
+export const getNFTMetaFilenameInCDN = (
   socialPic: string,
   domainToOverlay?: string,
 ): string => {
@@ -130,7 +160,7 @@ export const getNFTFilenameInCDN = (
     parsePictureRecord(socialPic);
   const nftPfpFolder = 'nft-pfp';
   const isDomainNotEmpty = Boolean(domainToOverlay?.trim());
-  const overlayPostfix = isDomainNotEmpty ? `_o_${domainToOverlay}` : '';
+  const overlayPostfix = isDomainNotEmpty ? `_meta_${domainToOverlay}` : '';
   return `${nftPfpFolder}/${chainId}_${nftStandard}:${contractAddress}_${tokenId}${overlayPostfix}.svg`;
 };
 
@@ -148,6 +178,7 @@ export const cacheSocialPictureInCDN = async (
   }
   const fileName = getNFTFilenameInCDN(socialPic);
   const fileNameWithOverlay = getNFTFilenameInCDN(socialPic, domain.name);
+  const fileNameWithMeta = getNFTFilenameInCDN(socialPic, domain.name, true);
   const bucketName = env.CLOUD_STORAGE.CLIENT_ASSETS.BUCKET_ID;
   const bucket = storage.bucket(bucketName);
 
@@ -155,7 +186,8 @@ export const cacheSocialPictureInCDN = async (
   const [fileWithOverlayExists] = await bucket
     .file(fileNameWithOverlay)
     .exists();
-  if (!fileExists || !fileWithOverlayExists) {
+  const [fileWithMetaExists] = await bucket.file(fileNameWithMeta).exists();
+  if (!fileExists || !fileWithOverlayExists || !fileWithMetaExists) {
     const { fetchedMetadata, image } = await fetchTokenMetadata(resolution);
     const [imageData, mimeType] = await getNFTSocialPicture(image).catch(() => [
       '',
@@ -183,6 +215,17 @@ export const cacheSocialPictureInCDN = async (
           true,
         );
         files.push({ fname: fileNameWithOverlay, data: withOverlayImageData });
+      }
+
+      if (!fileWithMetaExists) {
+        const imageDataBase64 = `data:${mimeType};base64,${imageData}`;
+        const withMetaImageData = await metaSVGTemplate(
+          domain.name,
+          true,
+          imageDataBase64,
+          mimeType ? mimeType : undefined,
+        );
+        files.push({ fname: fileNameWithMeta, data: withMetaImageData });
       }
 
       // @TODO: this actually doesn't wait for uploading to finish. Re-do so we wait
@@ -215,11 +258,16 @@ export const cacheSocialPictureInCDN = async (
 export const getNftPfpImageFromCDN = async (
   socialPicTokenURI: string,
   withOverlayDomain?: string,
+  isMeta?: boolean,
 ): Promise<string | null> => {
   if (!isNotEmpty(socialPicTokenURI)) {
     return null;
   }
-  const fileName = getNFTFilenameInCDN(socialPicTokenURI, withOverlayDomain);
+  const fileName = getNFTFilenameInCDN(
+    socialPicTokenURI,
+    withOverlayDomain,
+    isMeta,
+  );
   const bucketName = env.CLOUD_STORAGE.CLIENT_ASSETS.BUCKET_ID;
   // const hostname = env.CLOUD_STORAGE.API_ENDPOINT_URL || 'https://storage.googleapis.com';
   const bucket = storage.bucket(bucketName);

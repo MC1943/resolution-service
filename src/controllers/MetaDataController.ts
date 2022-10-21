@@ -30,6 +30,7 @@ import {
   getNftPfpImageFromCDN,
   toBase64DataURI,
   cacheSocialPictureInCDN,
+  getNFTSocialPicture,
 } from '../utils/socialPicture';
 import { getDomainResolution } from '../services/Resolution';
 import {
@@ -45,6 +46,7 @@ import { Domain, DomainsResolution } from '../models';
 import { OpenSeaPort, Network } from 'opensea-js';
 import { EthereumProvider } from '../workers/EthereumProvider';
 import { belongsToTld, findDomainByNameOrToken } from '../utils/domain';
+import { metaSVGTemplate } from '../utils/socialPicture/svgTemplate';
 
 const DEFAULT_IMAGE_URL = (name: string) =>
   `https://metadata.unstoppabledomains.com/image-src/${name}.svg` as const;
@@ -297,7 +299,7 @@ export class MetaDataController {
           socialPictureValue,
           domain,
           resolution,
-          withOverlay,
+          withOverlay ? ImageType.WithOverlay : ImageType.Simple,
         ));
 
       return {
@@ -313,6 +315,40 @@ export class MetaDataController {
         resolution?.resolution || {},
       ),
     };
+  }
+
+  @Get('/metaimage-src/:domainOrToken')
+  @Header('Access-Control-Allow-Origin', '*')
+  @Header('Content-Type', 'image/svg+xml')
+  async getImageMetaSrc(
+    @Param('domainOrToken') domainOrToken: string,
+  ): Promise<string> {
+    const domain = await findDomainByNameOrToken(
+      domainOrToken.replace('.svg', ''),
+    );
+    const resolution = domain ? getDomainResolution(domain) : undefined;
+    const name = domain ? domain.name : domainOrToken.replace('.svg', '');
+
+    if (!name.includes('.')) {
+      return '';
+    }
+
+    if (domain && resolution) {
+      const socialPictureValue = resolution.resolution['social.picture.value'];
+
+      const metaImageFromCDN =
+        socialPictureValue &&
+        (await getOrCacheNowPfpNFT(
+          socialPictureValue,
+          domain,
+          resolution,
+          ImageType.MetaImage,
+        ));
+
+      return metaImageFromCDN || metaSVGTemplate(name, false);
+    }
+
+    return metaSVGTemplate(name, false); //non existent domain
   }
 
   @Get('/image-src/:domainOrToken')
@@ -344,7 +380,7 @@ export class MetaDataController {
           socialPictureValue,
           domain,
           resolution,
-          withOverlay,
+          withOverlay ? ImageType.WithOverlay : ImageType.Simple,
         ));
 
       return (
@@ -655,15 +691,24 @@ export async function fetchTokenMetadata(
   return { fetchedMetadata, image }; // TODO: get rid of socialPicture param
 }
 
+enum ImageType {
+  Simple, // picture only
+  WithOverlay, // picture + domain + logo (square)
+  MetaImage, // picture + domai + QR code (rectangualar, used for meta tags)
+}
+
 async function getOrCacheNowPfpNFT(
   socialPicture: string,
   domain: Domain,
   resolution: DomainsResolution,
-  withOverlay: boolean,
+  imageType: ImageType,
 ) {
   const cachedPfpNFT = await getNftPfpImageFromCDN(
     socialPicture,
-    withOverlay ? domain.name : undefined,
+    imageType === ImageType.WithOverlay || imageType === ImageType.MetaImage
+      ? domain.name
+      : undefined,
+    imageType === ImageType.MetaImage ? true : undefined,
   );
   if (!cachedPfpNFT) {
     await cacheSocialPictureInCDN(socialPicture, domain, resolution);
@@ -671,7 +716,10 @@ async function getOrCacheNowPfpNFT(
     // TODO: improve PFP NFT fetching after caching in CDN
     const trulyCachedPFPNFT = await getNftPfpImageFromCDN(
       socialPicture,
-      withOverlay ? domain.name : undefined,
+      imageType === ImageType.WithOverlay || imageType === ImageType.MetaImage
+        ? domain.name
+        : undefined,
+      imageType === ImageType.MetaImage ? true : undefined,
     );
     return trulyCachedPFPNFT;
   }
