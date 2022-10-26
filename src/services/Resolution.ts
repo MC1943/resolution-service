@@ -1,6 +1,7 @@
 import { env } from '../env';
 import { Domain, DomainsResolution, DomainsReverseResolution } from '../models';
 import { Blockchain } from '../types/common';
+import { isSupportedTLD } from '../utils/domain';
 import { ETHAddressRegex } from '../utils/ethersUtils';
 
 export function IsZilDomain(name: string): boolean {
@@ -61,5 +62,11 @@ export async function getReverseResolution(
       relations: ['domain', 'domain.resolutions'],
     });
   }
+
+  const domainName = reverse?.domain?.name as string;
+  if (domainName && !isSupportedTLD(domainName)) {
+    return undefined;
+  }
+
   return reverse;
 }

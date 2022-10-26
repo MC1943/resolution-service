@@ -5,6 +5,7 @@ import { env } from '../env';
 import { ApiKey, DomainsReverseResolution } from '../models';
 import { Blockchain } from '../types/common';
 import { DomainTestHelper } from '../utils/testing/DomainTestHelper';
+import { eip137Namehash } from '../utils/namehash';
 
 describe('ReverseController', () => {
   const reverseAddress = '0x8aaD44321A86b170879d7A244c1e8d360c99DdA8';
@@ -74,6 +75,58 @@ describe('ReverseController', () => {
     const emptyAddress = '0x1234567890123456789012345678901234567890';
     const res = await supertest(api)
       .get(`/reverse/${emptyAddress}`)
+      .auth(testApiKey.apiKey, { type: 'bearer' })
+      .send();
+
+    expect(res.status).eq(200);
+    expect(res.body).containSubset({
+      meta: {
+        domain: '',
+        owner: null,
+        resolver: null,
+        registry: null,
+        blockchain: null,
+        networkId: null,
+      },
+      records: {},
+    });
+  });
+
+  it('should return empty response for non-supported tld', async () => {
+    const reverseAddressUnsopported =
+      '0x8aaD44321A86b170879d7A244c1e8d360c99DdA1';
+    const { domain } = await DomainTestHelper.createTestDomain({
+      name: 'brad.coin',
+      node: eip137Namehash('brad.coin'),
+      ownerAddress: '0x8aaD44321A86b170879d7A244c1e8d360c99DdA1',
+      blockchain: Blockchain.ETH,
+      networkId: 1337,
+      registry: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+      resolution: {
+        'crypto.ETH.address': '0x8aaD44321A86b170879d7A244c1e8d360c99DdA8',
+      },
+      resolver: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+    });
+
+    const resolution = domain.getResolution(Blockchain.MATIC, 1337);
+    resolution.ownerAddress = '0x0000000000000000000000000000000000000000';
+    resolution.resolver = '0xa9a6a3626993d487d2dbda3173cf58ca1a9d9e9f';
+    resolution.registry = '0xa9a6a3626993d487d2dbda3173cf58ca1a9d9e9f';
+    resolution.resolution = {};
+    domain.setResolution(resolution);
+
+    const reverse = new DomainsReverseResolution({
+      blockchain: Blockchain.ETH,
+      networkId: env.APPLICATION.ETHEREUM.NETWORK_ID,
+      reverseAddress: reverseAddressUnsopported.toLowerCase(),
+    });
+    domain.setReverseResolution(reverse);
+    await domain.save();
+
+    const reverseAddress = '0x8aaD44321A86b170879d7A244c1e8d360c99DdA8';
+
+    const res = await supertest(api)
+      .get(`/reverse/${reverseAddressUnsopported}`)
       .auth(testApiKey.apiKey, { type: 'bearer' })
       .send();
 
