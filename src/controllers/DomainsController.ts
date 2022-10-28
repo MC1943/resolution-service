@@ -30,6 +30,7 @@ import {
   normalizeDomainName,
   normalizeDomainOrToken,
 } from '../utils/domain';
+import { DeadAdresses } from '../types/common';
 
 @OpenAPI({
   security: [{ apiKeyAuth: [] }],
@@ -172,12 +173,22 @@ export class DomainsController {
     qb.leftJoinAndSelect('domain.reverseResolutions', 'reverseResolutions');
     qb.leftJoinAndSelect('domain.parent', 'parent');
     qb.where(`1 = 1`);
+
+    // Filter domains with dead address owners from response
+    const deadAddresses = DeadAdresses.map(
+      (addr) => "'" + addr + "'",
+    ).toString();
+    if (!query.owners) {
+      qb.where(`resolution.owner_address not in (${deadAddresses})`);
+    }
+
     for (const q of where) {
       qb.andWhere(q.query, q.parameters);
     }
     for (const c of query.sort.columns) {
       qb.addOrderBy(c, query.sort.direction);
     }
+
     qb.take(query.perPage + 1);
     const domains = await qb.getMany();
     const hasMore = domains.length > query.perPage;

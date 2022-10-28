@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { ApiKey, Domain, DomainsResolution } from '../models';
 import { DomainTestHelper } from '../utils/testing/DomainTestHelper';
 import { env } from '../env';
-import { Blockchain } from '../types/common';
+import { Blockchain, DeadAdresses } from '../types/common';
 import { describe } from 'mocha';
 
 describe('DomainsController', () => {
@@ -599,6 +599,102 @@ describe('DomainsController', () => {
           sortDirection: 'ASC',
         },
       });
+      expect(res.status).eq(200);
+    });
+
+    it('should not return domains with dead wallet addresses', async () => {
+      const deadAddress = DeadAdresses[0];
+      const testDomains = await Promise.all([
+        await DomainTestHelper.createTestDomain({
+          name: 'test.crypto',
+          node: '0xb72f443a17edf4a55f766cf3c83469e6f96494b16823a41a4acb25800f303103',
+          ownerAddress: deadAddress,
+          registry: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+        }),
+        await DomainTestHelper.createTestDomain({
+          name: 'test1.crypto',
+          node: '0x99cc72a0f40d092d1b8b3fa8f2da5b7c0c6a9726679112e3827173f8b2460502',
+          ownerAddress: '0x58ca45e932a88b2e7d0130712b3aa9fb7c5781e2',
+          registry: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+        }),
+        await DomainTestHelper.createTestDomain({
+          name: 'test3.crypto',
+          node: '0xde3d1be3661eadd92290828d632e0dd25703b6008cd92d03f51be25795fe922d',
+          ownerAddress: '0x111115e932a88b2e7d0130712b3aa9fb7c522222',
+          registry: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+        }),
+      ]);
+
+      const expectedDomains = testDomains
+        .filter((domain) => domain.resolution.ownerAddress != deadAddress)
+        .map((d) => ({
+          id: d.domain.name,
+          attributes: {
+            meta: {
+              domain: d.domain.name,
+              blockchain: d.resolution.blockchain,
+              networkId: d.resolution.networkId,
+              owner: d.resolution.ownerAddress,
+              registry: d.resolution.registry,
+              resolver: d.resolution.resolver,
+              reverse: false,
+            },
+            records: {},
+          },
+        }));
+
+      const res = await supertest(api)
+        .get('/domains')
+        .auth(testApiKey.apiKey, { type: 'bearer' })
+        .send();
+      expect(res.body.data).to.have.deep.members(expectedDomains);
+      expect(res.status).eq(200);
+    });
+
+    it('should return domains with dead wallet on exact wallet address lookup', async () => {
+      const deadAddress = DeadAdresses[0];
+      const testDomains = await Promise.all([
+        await DomainTestHelper.createTestDomain({
+          name: 'test.crypto',
+          node: '0xb72f443a17edf4a55f766cf3c83469e6f96494b16823a41a4acb25800f303103',
+          ownerAddress: deadAddress,
+          registry: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+        }),
+        await DomainTestHelper.createTestDomain({
+          name: 'test1.crypto',
+          node: '0x99cc72a0f40d092d1b8b3fa8f2da5b7c0c6a9726679112e3827173f8b2460502',
+          ownerAddress: deadAddress,
+          registry: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+        }),
+        await DomainTestHelper.createTestDomain({
+          name: 'test3.crypto',
+          node: '0xde3d1be3661eadd92290828d632e0dd25703b6008cd92d03f51be25795fe922d',
+          ownerAddress: deadAddress,
+          registry: '0xd1e5b0ff1287aa9f9a268759062e4ab08b9dacbe',
+        }),
+      ]);
+
+      const expectedDomains = testDomains.map((d) => ({
+        id: d.domain.name,
+        attributes: {
+          meta: {
+            domain: d.domain.name,
+            blockchain: d.resolution.blockchain,
+            networkId: d.resolution.networkId,
+            owner: d.resolution.ownerAddress,
+            registry: d.resolution.registry,
+            resolver: d.resolution.resolver,
+            reverse: false,
+          },
+          records: {},
+        },
+      }));
+
+      const res = await supertest(api)
+        .get(`/domains?owners[]=${deadAddress}`)
+        .auth(testApiKey.apiKey, { type: 'bearer' })
+        .send();
+      expect(res.body.data).to.have.deep.members(expectedDomains);
       expect(res.status).eq(200);
     });
   });
